@@ -1,0 +1,356 @@
+<html><head><base href="https://calendarforge.ai" /><title>CalendarForge AI - Customizable Calendar Creation with PDF Download</title><style>
+  body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .container {
+    background-color: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    max-width: 1000px;
+    width: 100%;
+  }
+  h1 {
+    color: #333;
+    text-align: center;
+  }
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  label {
+    font-weight: bold;
+  }
+  select, input {
+    padding: 5px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+  }
+  button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  button:hover {
+    background-color: #45a049;
+  }
+  #calendar {
+    margin-top: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    overflow: hidden;
+  }
+  #download {
+    margin-top: 20px;
+    text-align: center;
+  }
+  #download a {
+    background-color: #008CBA;
+    color: white;
+    padding: 10px 20px;
+    text-decoration: none;
+    border-radius: 5px;
+    font-size: 16px;
+  }
+  #download a:hover {
+    background-color: #007B9A;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background-color: #f2f2f2;
+    text-align: center;
+  }
+  .today {
+    background-color: #e6f3ff;
+    font-weight: bold;
+  }
+  .day-number {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 5px;
+  }
+  .day-content {
+    min-height: 80px;
+  }
+  .weekly td {
+    height: 150px;
+    width: 14.28%;
+  }
+  .monthly td {
+    height: 100px;
+    width: 14.28%;
+  }
+  .yearly td {
+    height: 30px;
+    width: 14.28%;
+  }
+  .weekend {
+    background-color: #f5f5f5;
+  }
+</style><script type="text/javascript" nonce="3ef5692b142a4420908a6375302" src="//local.adguard.org?ts=1721274919612&amp;type=content-script&amp;dmn=party.websim.ai&amp;url=https%3A%2F%2Fparty.websim.ai%2Fapi%2Fv1%2Fsites%2F0HPDl8vOHlQXFNzvz%2Fhtml%3Fraw%3Dtrue&amp;app=com.google.Chrome&amp;css=3&amp;js=1&amp;rel=1&amp;rji=1&amp;sbe=1"></script>
+<script type="text/javascript" nonce="3ef5692b142a4420908a6375302" src="//local.adguard.org?ts=1721274919612&amp;name=AdGuard%20Assistant&amp;name=AdGuard%20Extra&amp;type=user-script"></script></head><body>
+  <div class="container">
+    <h1>CalendarForge AI</h1>
+    <form id="calendarForm">
+      <label for="calendarType">Calendar Type:</label>
+      <select id="calendarType" name="calendarType">
+        <option value="monthly">Monthly</option>
+        <option value="weekly">Weekly</option>
+        <option value="yearly">Yearly</option>
+      </select>
+
+      <label for="year">Year:</label>
+      <input type="number" id="year" name="year" min="1900" max="2100" value="2024">
+
+      <div id="monthSection">
+        <label for="month">Month:</label>
+        <select id="month" name="month">
+          <option value="0">January</option>
+          <option value="1">February</option>
+          <option value="2">March</option>
+          <option value="3">April</option>
+          <option value="4">May</option>
+          <option value="5">June</option>
+          <option value="6">July</option>
+          <option value="7">August</option>
+          <option value="8">September</option>
+          <option value="9">October</option>
+          <option value="10">November</option>
+          <option value="11">December</option>
+        </select>
+      </div>
+
+      <div id="weekSection">
+        <label for="week">Week:</label>
+        <select id="week" name="week">
+          <!-- Options will be dynamically populated based on the selected month -->
+        </select>
+      </div>
+
+      <button type="submit">Generate Calendar</button>
+    </form>
+
+    <div id="calendar">
+      <!-- Calendar will be displayed here -->
+    </div>
+
+    <div id="download">
+      <!-- Download link will appear here -->
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <script>
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+    document.getElementById('calendarType').addEventListener('change', updateFormVisibility);
+    document.getElementById('month').addEventListener('change', updateWeekOptions);
+    document.getElementById('year').addEventListener('change', updateWeekOptions);
+
+    function updateFormVisibility() {
+      const type = document.getElementById('calendarType').value;
+      const weekSection = document.getElementById('weekSection');
+      const monthSection = document.getElementById('monthSection');
+      
+      if (type === 'weekly') {
+        weekSection.style.display = 'block';
+        monthSection.style.display = 'block';
+      } else if (type === 'monthly') {
+        weekSection.style.display = 'none';
+        monthSection.style.display = 'block';
+      } else {
+        weekSection.style.display = 'none';
+        monthSection.style.display = 'none';
+      }
+
+      updateWeekOptions();
+    }
+
+    function updateWeekOptions() {
+      const year = parseInt(document.getElementById('year').value);
+      const month = parseInt(document.getElementById('month').value);
+      const weekSelect = document.getElementById('week');
+      
+      // Clear existing options
+      weekSelect.innerHTML = '';
+
+      // Get the number of weeks in the month
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      const numWeeks = Math.ceil((lastDay.getDate() + (firstDay.getDay() + 6) % 7) / 7);
+
+      // Add week options
+      for (let i = 1; i <= numWeeks; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = `Week ${i}`;
+        weekSelect.appendChild(option);
+      }
+    }
+
+    document.getElementById('calendarForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const type = document.getElementById('calendarType').value;
+      const year = parseInt(document.getElementById('year').value);
+      const month = parseInt(document.getElementById('month').value);
+      const week = parseInt(document.getElementById('week').value);
+
+      let calendarHTML = '';
+      if (type === 'weekly') {
+        calendarHTML = generateWeeklyCalendar(year, month, week);
+      } else if (type === 'monthly') {
+        calendarHTML = generateMonthlyCalendar(year, month);
+      } else {
+        calendarHTML = generateYearlyCalendar(year);
+      }
+
+      document.getElementById('calendar').innerHTML = calendarHTML;
+
+      // Generate download link
+      const downloadLink = document.createElement('a');
+      downloadLink.href = '#';
+      downloadLink.textContent = 'Download Calendar as PDF';
+      downloadLink.onclick = function() {
+        generatePDF();
+        return false;
+      };
+      document.getElementById('download').innerHTML = '';
+      document.getElementById('download').appendChild(downloadLink);
+    });
+
+    function generateWeeklyCalendar(year, month, week) {
+      const firstDayOfMonth = new Date(year, month, 1);
+      const lastDayOfMonth = new Date(year, month + 1, 0);
+      
+      // Calculate the first day of the selected week (Monday)
+      const firstDayOfWeek = new Date(firstDayOfMonth);
+      firstDayOfWeek.setDate(1 + (week - 1) * 7 - ((firstDayOfMonth.getDay() + 6) % 7));
+      
+      let html = `<h2>${monthNames[month]} ${year} - Week ${week}</h2>`;
+      html += '<table class="weekly"><tr>';
+      
+      for (let i = 0; i < 7; i++) {
+        html += `<th>${dayNames[i]}</th>`;
+      }
+      
+      html += '</tr><tr>';
+      
+      for (let i = 0; i < 7; i++) {
+        const currentDate = new Date(firstDayOfWeek);
+        currentDate.setDate(firstDayOfWeek.getDate() + i);
+        
+        const isWeekend = i === 5 || i === 6;
+        const weekendClass = isWeekend ? 'weekend' : '';
+        
+        if (currentDate.getMonth() === month) {
+          html += `<td class="${weekendClass}">
+            <div class="day-number">${currentDate.getDate()}</div>
+            <div class="day-content"></div>
+          </td>`;
+        } else {
+          html += `<td class="${weekendClass}"></td>`;
+        }
+      }
+      
+      html += '</tr></table>';
+      return html;
+    }
+
+    function generateMonthlyCalendar(year, month) {
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      
+      let html = `<h2>${monthNames[month]} ${year}</h2>`;
+      html += '<table class="monthly"><tr>';
+      
+      for (let i = 0; i < 7; i++) {
+        html += `<th>${dayNames[i]}</th>`;
+      }
+      
+      html += '</tr>';
+      
+      let currentDay = new Date(firstDay);
+      currentDay.setDate(currentDay.getDate() - ((currentDay.getDay() + 6) % 7)); // Start from the previous Monday
+
+      while (currentDay <= lastDay || currentDay.getDay() !== 1) {
+        if (currentDay.getDay() === 1) {
+          html += '<tr>';
+        }
+
+        const isCurrentMonth = currentDay.getMonth() === month;
+        const isWeekend = currentDay.getDay() === 0 || currentDay.getDay() === 6;
+        const cellClass = isWeekend ? 'weekend' : '';
+        
+        html += `<td class="${cellClass}">`;
+        if (isCurrentMonth) {
+          html += `
+            <div class="day-number">${currentDay.getDate()}</div>
+            <div class="day-content"></div>
+          `;
+        }
+        html += '</td>';
+
+        if (currentDay.getDay() === 0) {
+          html += '</tr>';
+        }
+
+        currentDay.setDate(currentDay.getDate() + 1);
+      }
+      
+      html += '</table>';
+      return html;
+    }
+
+    function generateYearlyCalendar(year) {
+      let html = `<h2>${year}</h2>`;
+      for (let month = 0; month < 12; month++) {
+        html += generateMonthlyCalendar(year, month);
+      }
+      return html;
+    }
+
+    function generatePDF() {
+      const { jsPDF } = window.jspdf;
+      
+      html2canvas(document.querySelector("#calendar")).then(canvas => {
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF({
+          orientation: 'landscape',
+          unit: 'px',
+          format: [canvas.width, canvas.height]
+        });
+        
+        pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+        pdf.save("calendar.pdf");
+      });
+    }
+
+    // Initialize form
+    updateFormVisibility();
+    updateWeekOptions();
+  </script>
+</body></html>
